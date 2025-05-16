@@ -1,0 +1,51 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Tarefa {
+  id              Int          @id @default(autoincrement())
+  titulo          String
+  subTitulo       String
+  descricao       String
+  status          StatusTarefa @default(PENDENTE)
+  dataCriacao     DateTime     @default(now())
+  dataAtualizacao DateTime     @updatedAt
+  dataPrazo       DateTime?
+  concluida       Boolean      @default(false)
+  tipo            TarefaTipo
+
+  // tarefas composta
+  tarefaPaiId Int?
+  tarefaPai   Tarefa?  @relation("Subtarefas", fields: [tarefaPaiId], references: [id], onDelete: Cascade)
+  subtarefas  Tarefa[] @relation("Subtarefas")
+  limite      Int?
+
+  // tarefa folha
+  prioridade        PrioridadeTarefa?
+  pontos            Int?
+  tempoEstimadoDias Int?
+
+  @@map("tarefas-no-pattern-db")
+}
+
+enum StatusTarefa {
+  PENDENTE
+  EM_ANDAMENTO
+  CONCLUIDA
+}
+
+enum TarefaTipo {
+  FOLHA
+  COMPOSTA
+}
+
+enum PrioridadeTarefa {
+  BAIXA
+  MEDIA
+  ALTA
+}

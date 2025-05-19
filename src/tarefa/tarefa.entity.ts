@@ -26,8 +26,6 @@ export abstract class TarefaBase {
   protected subtitulo: string;
   protected descricao: string;
   protected status: StatusTarefa;
-  protected dataCriacao: Date;
-  protected dataAtualizacao: Date;
   protected dataPrazo?: Date;
   protected concluida: boolean;
   protected tipo: TarefaTipo;
@@ -42,8 +40,6 @@ export abstract class TarefaBase {
     this.subtitulo = props.subtitulo;
     this.descricao = props.descricao;
     this.status = props.status ?? StatusTarefa.PENDENTE;
-    this.dataCriacao = new Date();
-    this.dataAtualizacao = new Date();
     this.dataPrazo = props.dataPrazo;
     this.concluida = props.concluida ?? false;
     this.tipo = props.tipo;

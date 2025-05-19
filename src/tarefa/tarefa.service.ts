@@ -64,7 +64,7 @@ export class TarefaService {
         })),
       });
     }
-    
+
     return TarefaSimples.criar(dadosTarefa);
   }
 
@@ -87,9 +87,7 @@ export class TarefaService {
 
     const jaVinculada = subtarefas.find((s) => s.tarefaPaiId != null);
     if (jaVinculada) {
-      throw new BadRequestException(
-        `Subtarefa ${jaVinculada.id} já tem pai`,
-      );
+      throw new BadRequestException(`Subtarefa ${jaVinculada.id} já tem pai`);
     }
   }
 
@@ -134,7 +132,6 @@ export class TarefaService {
       where: { id },
       data: {
         status: tarefa.getStatus,
-        dataAtualizacao: new Date(),  // Data de atualização
       },
     });
   }
@@ -147,9 +144,7 @@ export class TarefaService {
 
     const tarefa = this.mapearTarefaExistente(tarefaExistente);
 
-    if (tarefa.getStatus !== 'EM_ANDAMENTO') {
-      throw new BadRequestException('Tarefa não está em andamento');
-    }
+    tarefa.concluirTarefa();
 
     // O campo `updatedAt` será automaticamente atualizado pelo Prisma
     await this.prisma.tarefa.update({

@@ -45,8 +45,7 @@ export class TarefaProjeto extends TarefaBase {
     }
 
     this.status = StatusTarefa.EM_ANDAMENTO;
-    this.dataAtualizacao = new Date();
-
+    
     for (const subtarefa of this.getSubtarefas) {
       subtarefa.status = StatusTarefa.EM_ANDAMENTO;
     }

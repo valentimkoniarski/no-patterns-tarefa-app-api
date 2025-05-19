@@ -61,8 +61,16 @@ export class TarefaSimples extends TarefaBase {
       throw new Error('Tarefa não pode ser iniciada');
     }
 
-    this.dataAtualizacao = new Date();
     this.status = StatusTarefa.EM_ANDAMENTO;
+  }
+
+  concluirTarefa() {
+    if (this.status !== StatusTarefa.EM_ANDAMENTO) {
+      throw new Error('Tarefa não pode ser concluída');
+    }
+
+    this.concluida = true;
+    this.status = StatusTarefa.CONCLUIDA;
   }
 
   // clone(mods: Partial<TarefaSimplesProps>): TarefaSimples {
@@ -107,8 +115,8 @@ export class TarefaSimples extends TarefaBase {
       pontos: this.pontos,
       tempoEstimadoDias: this.tempoEstimadoDias,
       limite: null,
-      dataCriacao: this.dataCriacao,
-      dataAtualizacao: this.dataAtualizacao,
+      dataAtualizacao: new Date(),
+      dataCriacao: new Date(),
     };
   }
 }

@@ -30,5 +30,8 @@ export class TarefaController {
     return this.service.iniciarTarefa(id);
   }
 
-
+  @Get(':id/sumario')
+  obterSumario(@Param('id', ParseIntPipe) id: number) {
+    return this.service.obterSumario(id);
+  }
 }

@@ -71,6 +71,27 @@ export class TarefaSimples extends TarefaBase {
     this.status = StatusTarefa.CONCLUIDA;
   }
 
+  obterSumario(): SumarioTarefa {
+    return {
+      pontosTotais: this.pontos,
+      estimativaTotalDias: this.tempoEstimadoDias,
+      concluidas: this.concluida ? 1 : 0,
+      pendentes: this.concluida ? 0 : 1,
+      progresso: this.getProgresso(),
+    };
+  }
+
+  getProgresso(): number {
+    switch (this.status) {
+      case StatusTarefa.PENDENTE:
+        return 0;
+      case StatusTarefa.EM_ANDAMENTO:
+        return 50;
+      case StatusTarefa.CONCLUIDA:
+        return 100;
+    }
+  }
+
   // clone(mods: Partial<TarefaSimplesProps>): TarefaSimples {
   //   return new TarefaSimples({
   //     id: this.id,
@@ -86,17 +107,6 @@ export class TarefaSimples extends TarefaBase {
   //     tempoEstimadoDias: mods.tempoEstimadoDias ?? this.tempoEstimadoDias,
   //   });
   // }
-
-  obterSumario(): SumarioTarefa {
-    return {
-      totalSubtarefas: 1,
-      concluidas: this.concluida ? 1 : 0,
-      pendentes: this.concluida ? 0 : 1,
-      pontosTotais: this.pontos,
-      estimativaTotalDias: this.tempoEstimadoDias,
-      progresso: this.concluida ? 100 : 0,
-    };
-  }
 
   toPrisma(): Tarefa {
     return {

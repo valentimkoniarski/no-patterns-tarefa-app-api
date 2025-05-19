@@ -33,6 +33,51 @@ export class TarefaProjeto extends TarefaBase {
     return this.subtarefas;
   }
 
+  obterSumario() {
+    const folhas = this.getSubtarefasAsFolhas();
+    const total = folhas.length;
+    const concluidas = folhas.filter(
+      (t) => t.status === StatusTarefa.CONCLUIDA,
+    ).length;
+
+    return {
+      totalSubtarefas: total,
+      concluidas,
+      pendentes: total - concluidas,
+      pontosTotais: folhas.reduce(
+        (acc, tarefaSimples) => acc + tarefaSimples.pontos,
+        0,
+      ),
+      estimativaTotalDias: folhas.reduce(
+        (acc, tarefaSimples) => acc + tarefaSimples.tempoEstimadoDias,
+        0,
+      ),
+      progresso: this.getProgresso(),
+    };
+  }
+
+  obterSubtarefasComoFolhas(): TarefaSimplesProps[] {
+    return this.subtarefas as TarefaSimplesProps[];
+  }
+
+  private getSubtarefasAsFolhas(): TarefaSimplesProps[] {
+    if (!Array.isArray(this.subtarefas)) return [];
+    return this.subtarefas.filter(
+      (t): t is TarefaSimplesProps => typeof t !== 'number',
+    );
+  }
+
+  getProgresso(): number {
+    const folhas = this.getSubtarefasAsFolhas();
+    const total = folhas.length;
+    if (total === 0) return 0;
+
+    const concluidas = folhas.filter(
+      (t) => t.status === StatusTarefa.CONCLUIDA,
+    ).length;
+    return Math.round((concluidas / total) * 100);
+  }
+
   iniciarTarefa() {
     if (this.concluida) {
       throw new Error('Tarefa já concluída');
@@ -47,9 +92,6 @@ export class TarefaProjeto extends TarefaBase {
     for (const subtarefa of this.getSubtarefas) {
       subtarefa.status = StatusTarefa.EM_ANDAMENTO;
     }
-
-
-
   }
 
   concluirTarefa() {
@@ -63,20 +105,12 @@ export class TarefaProjeto extends TarefaBase {
       throw new Error('Tarefa já concluída');
     }
 
-    console.log(this.status);
     if (this.status !== StatusTarefa.EM_ANDAMENTO) {
       throw new Error('Tarefa não pode ser concluída');
     }
 
     this.concluida = true;
     this.status = StatusTarefa.CONCLUIDA;
-  }
-
-  obterSumario(): SumarioTarefa {
-    return {
-      totalSubtarefas: this.subtarefasIds.length,
-      progresso: 1,
-    };
   }
 
   toPrisma() {

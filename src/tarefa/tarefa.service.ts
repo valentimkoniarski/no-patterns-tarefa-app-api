@@ -141,13 +141,8 @@ export class TarefaService {
     });
 
     const tarefa = this.mapearTarefaExistente(tarefaExistente);
-
-
-    console.log(tarefa);
-
     tarefa.concluirTarefa();
 
-    // O campo `updatedAt` será automaticamente atualizado pelo Prisma
     await this.prisma.tarefa.update({
       where: { id },
       data: {
@@ -155,5 +150,20 @@ export class TarefaService {
         concluida: true,
       },
     });
+  }
+
+  async obterSumario(id: number) {
+    const tarefaExistente = await this.prisma.tarefa.findUniqueOrThrow({
+      where: { id },
+      include: { subtarefas: true },
+    });
+
+    const tarefa = this.mapearTarefaExistente(tarefaExistente);
+
+    const sumario = tarefa.obterSumario();
+
+    return {
+      sumario,
+    };
   }
 }

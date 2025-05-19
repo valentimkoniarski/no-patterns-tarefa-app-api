@@ -5,6 +5,7 @@ import {
   TarefaTipo,
 } from '@prisma/client';
 import { TarefaBase, TarefaBaseProps, SumarioTarefa } from './tarefa.entity';
+import { TarefaDto } from '../tarefa.service';
 
 export type TarefaSimplesProps = TarefaBaseProps & {
   tarefaPaiId?: number;
@@ -53,34 +54,33 @@ export class TarefaSimples extends TarefaBase {
     });
   }
 
-  atualizar(props: TarefaSimplesProps): TarefaSimples {
-    if (props.tarefaPaiId) {
-      throw new Error('Tarefa simples não pode ter tarefa pai');
+  static atualizar(dto: TarefaDto): TarefaSimples {
+    if (dto.concluida) {
+      throw new Error('Tarefa já concluída');
     }
-    if (props.pontos < 0) {
+
+    if (dto.pontos && dto.pontos < 0) {
       throw new Error('Pontos não podem ser negativos');
     }
 
-    if (props.tempoEstimadoDias < 0) {
+    if (dto.tempoEstimadoDias && dto.tempoEstimadoDias < 0) {
       throw new Error('Tempo estimado não pode ser negativo');
     }
 
-    if (props.tipo !== TarefaTipo.SIMPLES) {
-      throw new Error('Tipo de tarefa inválido');
-    }
-
-    this.titulo = props.titulo;
-    this.subtitulo = props.subtitulo;
-    this.descricao = props.descricao;
-    this.dataPrazo = props.dataPrazo;
-    this.concluida = props.concluida ?? false;
-    this.status = props.status ?? StatusTarefa.PENDENTE;
-    this.tarefaPaiId = props.tarefaPaiId;
-    this.prioridade = props.prioridade;
-    this.pontos = props.pontos;
-    this.tempoEstimadoDias = props.tempoEstimadoDias;
-
-    return this;
+    return new TarefaSimples({
+      id: dto.id,
+      titulo: dto.titulo,
+      subtitulo: dto.subtitulo,
+      descricao: dto.descricao,
+      dataPrazo: dto.dataPrazo ?? undefined,
+      concluida: dto.concluida,
+      status: dto.status,
+      tipo: TarefaTipo.SIMPLES,
+      tarefaPaiId: dto.tarefaPai ?? undefined,
+      prioridade: dto.prioridade ?? PrioridadeTarefa.BAIXA,
+      pontos: dto.pontos ?? 0,
+      tempoEstimadoDias: dto.tempoEstimadoDias ?? 0,
+    });
   }
 
   get getStatus() {

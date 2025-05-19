@@ -5,25 +5,35 @@ import { TarefaBaseProps, TarefaBase } from './tarefa.entity';
 export type TarefaProjetoProps = TarefaBaseProps & {
   subtarefasIds?: number[];
   subtarefas?: TarefaSimplesProps[];
-  limite?: number;
+  limiteSubtarefas?: number;
 };
 
 export class TarefaProjeto extends TarefaBase {
   private subtarefasIds: number[];
   private subtarefas: TarefaSimplesProps[];
-  private limite?: number;
+  private limiteSubtarefas?: number;
 
   constructor(props: TarefaProjetoProps & { status?: StatusTarefa }) {
     super({ ...props, tipo: TarefaTipo.PROJETO, status: props.status });
 
+    if (props.limiteSubtarefas && props.limiteSubtarefas < 0) {
+      throw new Error('Limite de subtarefas não pode ser negativo');
+    }
+
+    if (props.subtarefasIds && props.limiteSubtarefas) {
+      if (props.limiteSubtarefas < props.subtarefasIds.length) {
+        throw new Error(
+          `Limite de subtarefas (${props.limiteSubtarefas}) excedido (${props.subtarefasIds.length})`,
+        );
+      }
+    }
+
     this.subtarefasIds = props.subtarefasIds ?? [];
     this.subtarefas = props.subtarefas ?? [];
-    this.limite = props.limite;
+    this.limiteSubtarefas = props.limiteSubtarefas;
   }
 
-  static fromPrisma(
-    raw: Tarefa & { subtarefasIds?: number[] },
-  ): TarefaProjeto {
+  static fromPrisma(raw: Tarefa & { subtarefasIds?: number[] }): TarefaProjeto {
     return new TarefaProjeto({
       id: raw.id,
       titulo: raw.titulo,
@@ -33,44 +43,39 @@ export class TarefaProjeto extends TarefaBase {
       concluida: raw.concluida,
       status: raw.status,
       tipo: TarefaTipo.PROJETO,
-      limite: raw.limite ?? undefined,
+      limiteSubtarefas: raw.limite ?? undefined,
       subtarefasIds: raw.subtarefasIds,
       subtarefas: [],
     });
   }
 
-  atualizar(props: TarefaProjetoProps): TarefaProjeto {
-    if (props.limite) {
-      if (props.limite < 0) {
-        throw new Error('Limite não pode ser negativo');
-      }
-      if (props?.subtarefas && props.subtarefas?.length > props.limite) {
-        throw new Error(
-          `Número de subtarefas não pode ser maior que o limite (${props.limite})`,
-        );
-      }
+  static atualizar(dto: TarefaProjetoProps) {
+    if (dto.concluida) {
+      throw new Error('Tarefa já concluída');
     }
 
-    if (props.subtarefas && props.subtarefas.length > 0) {
-      this.subtarefas = props.subtarefas;
+    if (
+      dto.subtarefasIds &&
+      dto.limiteSubtarefas &&
+      dto.limiteSubtarefas < dto.subtarefasIds?.length
+    ) {
+      throw new Error(
+        `Limite de subtarefas (${dto.limiteSubtarefas}) excedido (${dto.subtarefasIds?.length})`,
+      );
     }
 
-    if (props.limite) {
-      this.limite = props.limite;
-    }
-
-    this.titulo = props.titulo;
-    this.subtitulo = props.subtitulo;
-    this.descricao = props.descricao;
-    this.dataPrazo = props.dataPrazo;
-    this.status = props.status ?? this.status;
-    this.concluida = props.concluida ?? this.concluida;
-    this.tipo = TarefaTipo.PROJETO;
-    this.status = props.status ?? this.status;
-    this.subtarefas = props.subtarefas ?? this.subtarefas;
-    this.subtarefasIds = props.subtarefasIds ?? this.subtarefasIds;
-
-    return this;
+    return new TarefaProjeto({
+      id: dto.id,
+      titulo: dto.titulo,
+      subtitulo: dto.subtitulo,
+      descricao: dto.descricao,
+      dataPrazo: dto.dataPrazo ?? undefined,
+      concluida: dto.concluida,
+      status: dto.status,
+      tipo: TarefaTipo.PROJETO,
+      limiteSubtarefas: dto.limiteSubtarefas ?? undefined,
+      subtarefasIds: dto.subtarefasIds ?? [],
+    });
   }
 
   get getStatus() {

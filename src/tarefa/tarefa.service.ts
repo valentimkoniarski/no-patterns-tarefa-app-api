@@ -6,15 +6,17 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { TarefaSimples } from './domain/tarefa-simples.entity';
 import { TarefaProjeto } from './domain/tarefa-projeto.entity';
-import { PrioridadeTarefa, Tarefa } from '@prisma/client';
+import { PrioridadeTarefa, StatusTarefa, Tarefa } from '@prisma/client';
 
 export type TarefaDto = {
+  id?: number;
   titulo: string;
   subtitulo: string;
   descricao: string;
   dataPrazo?: Date;
   concluida?: boolean;
   tarefaPai?: number;
+  status?: StatusTarefa
 } & (
   | {
       tipo: 'SIMPLES';
@@ -53,7 +55,7 @@ export class TarefaService {
     if (tarefaPrisma.tipo === 'PROJETO') {
       return new TarefaProjeto({
         ...tarefaBase,
-        limite: tarefaPrisma.limite ?? undefined,
+        limiteSubtarefas: tarefaPrisma.limite ?? undefined,
         subtarefasIds: tarefaPrisma.subtarefas
           ? tarefaPrisma.subtarefas.map((st) => st.id)
           : [],
@@ -119,7 +121,7 @@ export class TarefaService {
         descricao: dto.descricao,
         dataPrazo: dto.dataPrazo,
         concluida: dto.concluida ?? false,
-        limite: dto.limite,
+        limiteSubtarefas: dto.limite,
         subtarefasIds: dto.subtarefasIds ?? [],
         tipo: 'PROJETO',
       });
@@ -148,7 +150,7 @@ export class TarefaService {
     const dtoCompleto = {
       ...tarefaPrisma,
       ...dto,
-    };
+    } as unknown as TarefaDto;
 
     if (dtoCompleto.subtarefasIds && dtoCompleto.subtarefasIds.length > 0) {
       await this.validarSubtarefas(dtoCompleto.subtarefasIds);
@@ -156,13 +158,17 @@ export class TarefaService {
 
     const tarefa =
       tarefaPrisma.tipo === 'SIMPLES'
-        ? TarefaSimples.fromPrisma(dtoCompleto)
-        : TarefaProjeto.fromPrisma(dtoCompleto);
+        ? TarefaSimples.atualizar(dtoCompleto)
+        : TarefaProjeto.atualizar(dtoCompleto);
 
     await this.prisma.tarefa.update({
       where: { id },
       data: tarefa.toPrisma(),
     });
+  }
+
+  async apagarTarefa(id: number) {
+    await this.prisma.tarefa.delete({ where: { id } });
   }
 
   async iniciarTarefa(id: number) {

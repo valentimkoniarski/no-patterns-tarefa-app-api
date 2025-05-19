@@ -39,4 +39,9 @@ export class TarefaController {
   obterSumario(@Param('id', ParseIntPipe) id: number) {
     return this.service.obterSumario(id);
   }
+
+  @Delete(':id')
+  apagar(@Param('id', ParseIntPipe) id: number) {
+    return this.service.apagarTarefa(id);
+  }
 }

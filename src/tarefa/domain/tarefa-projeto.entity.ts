@@ -1,6 +1,6 @@
-import { StatusTarefa, TarefaTipo } from '@prisma/client';
-import { TarefaBase, TarefaBaseProps, SumarioTarefa } from './tarefa.entity';
+import { StatusTarefa, Tarefa, TarefaTipo } from '@prisma/client';
 import { TarefaSimplesProps } from './tarefa-simples.entity';
+import { TarefaBaseProps, TarefaBase } from './tarefa.entity';
 
 export type TarefaProjetoProps = TarefaBaseProps & {
   subtarefasIds?: number[];
@@ -13,7 +13,7 @@ export class TarefaProjeto extends TarefaBase {
   private subtarefas: TarefaSimplesProps[];
   private limite?: number;
 
-  private constructor(props: TarefaProjetoProps & { status?: StatusTarefa }) {
+  constructor(props: TarefaProjetoProps & { status?: StatusTarefa }) {
     super({ ...props, tipo: TarefaTipo.PROJETO, status: props.status });
 
     this.subtarefasIds = props.subtarefasIds ?? [];
@@ -21,9 +21,21 @@ export class TarefaProjeto extends TarefaBase {
     this.limite = props.limite;
   }
 
-  static criar(props: TarefaProjetoProps): TarefaProjeto {
+  static fromPrisma(
+    raw: Tarefa & { subtarefasIds?: number[] },
+  ): TarefaProjeto {
     return new TarefaProjeto({
-      ...props,
+      id: raw.id,
+      titulo: raw.titulo,
+      subtitulo: raw.subTitulo,
+      descricao: raw.descricao,
+      dataPrazo: raw.dataPrazo ?? undefined,
+      concluida: raw.concluida,
+      status: raw.status,
+      tipo: TarefaTipo.PROJETO,
+      limite: raw.limite ?? undefined,
+      subtarefasIds: raw.subtarefasIds,
+      subtarefas: [],
     });
   }
 
@@ -42,8 +54,6 @@ export class TarefaProjeto extends TarefaBase {
     if (props.subtarefas && props.subtarefas.length > 0) {
       this.subtarefas = props.subtarefas;
     }
-
-    console.log('subtarefas', this.subtarefasIds);
 
     if (props.limite) {
       this.limite = props.limite;

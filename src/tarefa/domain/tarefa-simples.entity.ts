@@ -19,7 +19,7 @@ export class TarefaSimples extends TarefaBase {
   private pontos: number;
   private tempoEstimadoDias: number;
 
-  private constructor(props: TarefaSimplesProps & { status?: StatusTarefa }) {
+  constructor(props: TarefaSimplesProps & { status?: StatusTarefa }) {
     super({ ...props, tipo: TarefaTipo.SIMPLES, status: props.status });
 
     if (props.pontos < 0) {
@@ -36,9 +36,20 @@ export class TarefaSimples extends TarefaBase {
     this.tempoEstimadoDias = props.tempoEstimadoDias;
   }
 
-  static criar(props: TarefaSimplesProps): TarefaSimples {
+  static fromPrisma(raw: Tarefa): TarefaSimples {
     return new TarefaSimples({
-      ...props,
+      id: raw.id,
+      titulo: raw.titulo,
+      subtitulo: raw.subTitulo,
+      descricao: raw.descricao,
+      dataPrazo: raw.dataPrazo ?? undefined,
+      concluida: raw.concluida,
+      status: raw.status,
+      tipo: TarefaTipo.SIMPLES,
+      tarefaPaiId: raw.tarefaPaiId ?? undefined,
+      prioridade: raw.prioridade ?? PrioridadeTarefa.BAIXA,
+      pontos: raw.pontos ?? 0,
+      tempoEstimadoDias: raw.tempoEstimadoDias ?? 0,
     });
   }
 

@@ -30,8 +30,6 @@ model Tarefa {
   pontos            Int?
   tempoEstimadoDias Int?
 
-  // tarefa pipeline
-  etapas Json?
 
   @@map("tarefas-no-pattern-db")
 }
@@ -43,9 +41,8 @@ enum StatusTarefa {
 }
 
 enum TarefaTipo {
-  FOLHA
-  COMPOSTA
-  PIPELINE
+  SIMPLES
+  PROJETO
 }
 
 enum PrioridadeTarefa {

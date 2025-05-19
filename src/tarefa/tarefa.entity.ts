@@ -1,76 +1,51 @@
-export interface TarefaProps {
-  id: number;
-  titulo: string;
-  subTitulo: string;
-  descricao: string;
-  status: string;
-  dataCriacao: Date;
-  dataAtualizacao: Date;
-  concluida: boolean;
-  tipo: string;
-  dataPrazo?: Date;
-  prioridade?: string;
-  pontos?: number;
-  tempoEstimadoDias?: number;
-  subtarefas?: any[];
+import { StatusTarefa, TarefaTipo } from '@prisma/client';
+
+export interface SumarioTarefa {
+  totalSubtarefas?: number;
+  concluidas?: number;
+  pendentes?: number;
+  pontosTotais?: number;
+  estimativaTotalDias?: number;
+  progresso?: number;
 }
 
-export class Tarefa {
-  public id: number;
-  public titulo: string;
-  public subTitulo: string;
-  public descricao: string;
-  public status: string;
-  public dataCriacao: Date;
-  public dataAtualizacao: Date;
-  public concluida: boolean;
-  public tipo: string;
-  public dataPrazo?: Date;
-  public prioridade?: string;
-  public pontos?: number;
-  public tempoEstimadoDias?: number;
-  public subtarefas?: any[];
+export type TarefaBaseProps = {
+  id?: number;
+  titulo: string;
+  subtitulo: string;
+  descricao: string;
+  dataPrazo?: Date;
+  concluida?: boolean;
+  status?: StatusTarefa;
+  tipo: TarefaTipo;
+};
 
-  constructor(props: TarefaProps) {
+export abstract class TarefaBase {
+  protected id?: number;
+  protected titulo: string;
+  protected subtitulo: string;
+  protected descricao: string;
+  protected status: StatusTarefa;
+  protected dataCriacao: Date;
+  protected dataAtualizacao: Date;
+  protected dataPrazo?: Date;
+  protected concluida: boolean;
+  protected tipo: TarefaTipo;
+
+  constructor(props: TarefaBaseProps) {
+    if (!props.titulo) throw new Error('Título é obrigatório');
+    if (!props.subtitulo) throw new Error('Subtítulo é obrigatório');
+    if (!props.descricao) throw new Error('Descrição é obrigatória');
+
     this.id = props.id;
     this.titulo = props.titulo;
-    this.subTitulo = props.subTitulo;
+    this.subtitulo = props.subtitulo;
     this.descricao = props.descricao;
-    this.status = props.status;
-    this.dataCriacao = props.dataCriacao;
-    this.dataAtualizacao = props.dataAtualizacao;
-    this.concluida = props.concluida;
-    this.tipo = props.tipo;
+    this.status = props.status ?? StatusTarefa.PENDENTE;
+    this.dataCriacao = new Date();
+    this.dataAtualizacao = new Date();
     this.dataPrazo = props.dataPrazo;
-    this.prioridade = props.prioridade;
-    this.pontos = props.pontos;
-    this.tempoEstimadoDias = props.tempoEstimadoDias;
-    this.subtarefas = props.subtarefas;
-  }
-
-  calcularSumario(): any {
-    if (this.tipo === 'FOLHA') {
-      const progresso =
-        this.status === 'CONCLUIDA'
-          ? 100
-          : this.status === 'EM_ANDAMENTO'
-            ? 50
-            : 0;
-      return {
-        pontosTotais: this.pontos || 0,
-        estimativaTotalDias: this.tempoEstimadoDias || 0,
-        progresso,
-      };
-    } else {
-      let total = 0,
-        concluidas = 0;
-      if (Array.isArray(this.subtarefas)) {
-        for (const sub of this.subtarefas) {
-          total++;
-          if (sub.status === 'CONCLUIDA') concluidas++;
-        }
-      }
-      return { totalSubtarefas: total, concluidas };
-    }
+    this.concluida = props.concluida ?? false;
+    this.tipo = props.tipo;
   }
 }

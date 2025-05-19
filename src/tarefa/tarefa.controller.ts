@@ -9,15 +9,20 @@ import {
   ParseIntPipe,
   Patch,
 } from '@nestjs/common';
-import { CriarTarefaDto, TarefaService } from './tarefa.service';
+import { TarefaDto, TarefaService } from './tarefa.service';
 
 @Controller('tarefas')
 export class TarefaController {
   constructor(private service: TarefaService) {}
 
   @Post()
-  criar(@Body() dto: CriarTarefaDto) {
+  criar(@Body() dto: TarefaDto) {
     return this.service.criarTarefa(dto);
+  }
+
+  @Put(':id')
+  atualizar(@Param('id', ParseIntPipe) id: number, @Body() dto: TarefaDto) {
+    return this.service.atualizarTarefa(id, dto);
   }
 
   @Patch(':id/concluir')

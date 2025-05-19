@@ -11,18 +11,56 @@ export type TarefaProjetoProps = TarefaBaseProps & {
 export class TarefaProjeto extends TarefaBase {
   private subtarefasIds: number[];
   private subtarefas: TarefaSimplesProps[];
+  private limite?: number;
 
   private constructor(props: TarefaProjetoProps & { status?: StatusTarefa }) {
     super({ ...props, tipo: TarefaTipo.PROJETO, status: props.status });
 
     this.subtarefasIds = props.subtarefasIds ?? [];
     this.subtarefas = props.subtarefas ?? [];
+    this.limite = props.limite;
   }
 
   static criar(props: TarefaProjetoProps): TarefaProjeto {
     return new TarefaProjeto({
       ...props,
     });
+  }
+
+  atualizar(props: TarefaProjetoProps): TarefaProjeto {
+    if (props.limite) {
+      if (props.limite < 0) {
+        throw new Error('Limite não pode ser negativo');
+      }
+      if (props?.subtarefas && props.subtarefas?.length > props.limite) {
+        throw new Error(
+          `Número de subtarefas não pode ser maior que o limite (${props.limite})`,
+        );
+      }
+    }
+
+    if (props.subtarefas && props.subtarefas.length > 0) {
+      this.subtarefas = props.subtarefas;
+    }
+
+    console.log('subtarefas', this.subtarefasIds);
+
+    if (props.limite) {
+      this.limite = props.limite;
+    }
+
+    this.titulo = props.titulo;
+    this.subtitulo = props.subtitulo;
+    this.descricao = props.descricao;
+    this.dataPrazo = props.dataPrazo;
+    this.status = props.status ?? this.status;
+    this.concluida = props.concluida ?? this.concluida;
+    this.tipo = TarefaTipo.PROJETO;
+    this.status = props.status ?? this.status;
+    this.subtarefas = props.subtarefas ?? this.subtarefas;
+    this.subtarefasIds = props.subtarefasIds ?? this.subtarefasIds;
+
+    return this;
   }
 
   get getStatus() {

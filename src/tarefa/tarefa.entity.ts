@@ -27,8 +27,8 @@ export abstract class TarefaBase {
   protected descricao: string;
   protected status: StatusTarefa;
   protected dataPrazo?: Date;
-  protected concluida: boolean;
-  protected tipo: TarefaTipo;
+  concluida: boolean;
+  tipo: TarefaTipo;
 
   constructor(props: TarefaBaseProps) {
     if (!props.titulo) throw new Error('Título é obrigatório');

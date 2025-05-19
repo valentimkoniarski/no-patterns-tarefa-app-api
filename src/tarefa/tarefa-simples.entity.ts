@@ -22,10 +22,6 @@ export class TarefaSimples extends TarefaBase {
   private constructor(props: TarefaSimplesProps & { status?: StatusTarefa }) {
     super({ ...props, tipo: TarefaTipo.SIMPLES, status: props.status });
 
-    if (props.tarefaPaiId) {
-      throw new Error('Tarefa simples não pode ter tarefa pai');
-    }
-
     if (props.pontos < 0) {
       throw new Error('Pontos não podem ser negativos');
     }
@@ -44,6 +40,36 @@ export class TarefaSimples extends TarefaBase {
     return new TarefaSimples({
       ...props,
     });
+  }
+
+  atualizar(props: TarefaSimplesProps): TarefaSimples {
+    if (props.tarefaPaiId) {
+      throw new Error('Tarefa simples não pode ter tarefa pai');
+    }
+    if (props.pontos < 0) {
+      throw new Error('Pontos não podem ser negativos');
+    }
+
+    if (props.tempoEstimadoDias < 0) {
+      throw new Error('Tempo estimado não pode ser negativo');
+    }
+
+    if (props.tipo !== TarefaTipo.SIMPLES) {
+      throw new Error('Tipo de tarefa inválido');
+    }
+
+    this.titulo = props.titulo;
+    this.subtitulo = props.subtitulo;
+    this.descricao = props.descricao;
+    this.dataPrazo = props.dataPrazo;
+    this.concluida = props.concluida ?? false;
+    this.status = props.status ?? StatusTarefa.PENDENTE;
+    this.tarefaPaiId = props.tarefaPaiId;
+    this.prioridade = props.prioridade;
+    this.pontos = props.pontos;
+    this.tempoEstimadoDias = props.tempoEstimadoDias;
+
+    return this;
   }
 
   get getStatus() {

@@ -21,7 +21,6 @@ export type CriarTarefaDto = {
       prioridade: PrioridadeTarefa;
       pontos: number;
       tempoEstimadoDias: number;
-      // não permitido em SIMPLES:
       subtarefasIds?: never;
       limite?: never;
     }
@@ -29,7 +28,6 @@ export type CriarTarefaDto = {
       tipo: 'PROJETO';
       subtarefasIds: number[];
       limite?: number;
-      // não permitido em PROJETO:
       prioridade?: never;
       pontos?: never;
       tempoEstimadoDias?: never;
@@ -40,36 +38,68 @@ export type CriarTarefaDto = {
 export class TarefaService {
   constructor(private prisma: PrismaService) {}
 
+  private mapearTarefaExistente(tarefaExistente) {
+    const dadosTarefa = {
+      ...tarefaExistente,
+      subtitulo: tarefaExistente.subTitulo,
+      dataPrazo: tarefaExistente.dataPrazo ?? undefined,
+      tarefaPaiId: tarefaExistente.tarefaPaiId ?? undefined,
+      prioridade: tarefaExistente.prioridade ?? PrioridadeTarefa.MEDIA,
+      pontos: tarefaExistente.pontos ?? 0,
+      tempoEstimadoDias: tarefaExistente.tempoEstimadoDias ?? 0,
+    };
+
+    if (tarefaExistente.tipo === 'PROJETO') {
+      return TarefaProjeto.criar({
+        ...dadosTarefa,
+        limite: tarefaExistente.limite ?? undefined,
+        subtarefas: (tarefaExistente.subtarefas ?? []).map((sub) => ({
+          ...sub,
+          subtitulo: tarefaExistente.subTitulo,
+          dataPrazo: tarefaExistente.dataPrazo ?? undefined,
+          tarefaPaiId: tarefaExistente.tarefaPaiId ?? undefined,
+          prioridade: tarefaExistente.prioridade ?? PrioridadeTarefa.MEDIA,
+          pontos: tarefaExistente.pontos ?? 0,
+          tempoEstimadoDias: tarefaExistente.tempoEstimadoDias ?? 0,
+        })),
+      });
+    }
+    
+    return TarefaSimples.criar(dadosTarefa);
+  }
+
+  private async validarSubtarefas(subtarefasIds: number[]) {
+    const subtarefas = await this.prisma.tarefa.findMany({
+      where: {
+        id: { in: subtarefasIds },
+        tipo: 'SIMPLES',
+      },
+      select: { id: true, tarefaPaiId: true },
+    });
+
+    const encontrados = subtarefas.map((s) => s.id);
+    const faltantes = subtarefasIds.filter((id) => !encontrados.includes(id));
+    if (faltantes.length > 0) {
+      throw new NotFoundException(
+        `Subtarefas não encontradas: ${faltantes.join(', ')}`,
+      );
+    }
+
+    const jaVinculada = subtarefas.find((s) => s.tarefaPaiId != null);
+    if (jaVinculada) {
+      throw new BadRequestException(
+        `Subtarefa ${jaVinculada.id} já tem pai`,
+      );
+    }
+  }
+
   async criarTarefa(dto: CriarTarefaDto) {
     let tarefa;
     if (dto.tipo === 'SIMPLES') {
       tarefa = TarefaSimples.criar(dto);
     } else {
       if (dto.subtarefasIds && dto.subtarefasIds.length > 0) {
-        const subtarefas = await this.prisma.tarefa.findMany({
-          where: {
-            id: { in: dto.subtarefasIds },
-            tipo: 'SIMPLES',
-          },
-          select: { id: true, tarefaPaiId: true },
-        });
-
-        const encontrados = subtarefas.map((s) => s.id);
-        const faltantes = dto.subtarefasIds.filter(
-          (id) => !encontrados.includes(id),
-        );
-        if (faltantes.length > 0) {
-          throw new NotFoundException(
-            `Subtarefas não encontradas: ${faltantes.join(', ')}`,
-          );
-        }
-
-        const jaVinculada = subtarefas.find((s) => s.tarefaPaiId != null);
-        if (jaVinculada) {
-          throw new BadRequestException(
-            `Subtarefa ${jaVinculada.id} já tem pai`,
-          );
-        }
+        await this.validarSubtarefas(dto.subtarefasIds);
       }
 
       tarefa = TarefaProjeto.criar(dto);
@@ -85,6 +115,7 @@ export class TarefaService {
     }
 
     const data = tarefa.toPrisma();
+    // O Prisma automaticamente vai preencher os campos createdAt e updatedAt
     await this.prisma.tarefa.create({ data });
     return tarefa;
   }
@@ -92,66 +123,41 @@ export class TarefaService {
   async iniciarTarefa(id: number) {
     const tarefaExistente = await this.prisma.tarefa.findUniqueOrThrow({
       where: { id },
-      include: {
-        subtarefas: true,
-      },
+      include: { subtarefas: true },
     });
 
-    let tarefa: TarefaSimples | TarefaProjeto;
+    const tarefa = this.mapearTarefaExistente(tarefaExistente);
+    tarefa.iniciarTarefa();
 
-    if (tarefaExistente.tipo === 'SIMPLES') {
-      tarefa = TarefaSimples.criar({
-        ...tarefaExistente,
-        subtitulo: tarefaExistente.subTitulo,
-        dataPrazo: tarefaExistente.dataPrazo ?? undefined,
-        tarefaPaiId: tarefaExistente.tarefaPaiId ?? undefined,
-        prioridade: tarefaExistente.prioridade ?? PrioridadeTarefa.MEDIA,
-        pontos: tarefaExistente.pontos ?? 0,
-        tempoEstimadoDias: tarefaExistente.tempoEstimadoDias ?? 0,
-      });
+    // O campo `updatedAt` será automaticamente atualizado pelo Prisma
+    await this.prisma.tarefa.update({
+      where: { id },
+      data: {
+        status: tarefa.getStatus,
+        dataAtualizacao: new Date(),  // Data de atualização
+      },
+    });
+  }
 
-      tarefa.iniciarTarefa();
-      await this.prisma.tarefa.update({
-        where: { id },
-        data: {
-          status: tarefa.getStatus,
-          dataAtualizacao: new Date(),
-        },
-      });
-    } else if (tarefaExistente.tipo === 'PROJETO') {
-      tarefa = TarefaProjeto.criar({
-        ...tarefaExistente,
-        subtitulo: tarefaExistente.subTitulo,
-        dataPrazo: undefined,
-        limite: tarefaExistente.limite ?? undefined,
-        subtarefas: (tarefaExistente.subtarefas ?? []).map((sub) => ({
-          ...sub,
-          subtitulo: tarefaExistente.subTitulo,
-          dataPrazo: tarefaExistente.dataPrazo ?? undefined,
-          tarefaPaiId: tarefaExistente.tarefaPaiId ?? undefined,
-          prioridade: tarefaExistente.prioridade ?? PrioridadeTarefa.MEDIA,
-          pontos: tarefaExistente.pontos ?? 0,
-          tempoEstimadoDias: tarefaExistente.tempoEstimadoDias ?? 0,
-        })),
-      });
+  async concluirTarefa(id: number) {
+    const tarefaExistente = await this.prisma.tarefa.findUniqueOrThrow({
+      where: { id },
+      include: { subtarefas: true },
+    });
 
-      tarefa.iniciarTarefa();
-      await this.prisma.tarefa.update({
-        where: { id },
-        data: {
-          status: tarefa.getStatus,
-          dataAtualizacao: new Date(),
-          subtarefas: {
-            updateMany: tarefa.getSubtarefas.map((sub) => ({
-              where: { id: sub.id },
-              data: {
-                status: sub.status,
-                dataAtualizacao: new Date(),
-              },
-            })),
-          },
-        },
-      });
+    const tarefa = this.mapearTarefaExistente(tarefaExistente);
+
+    if (tarefa.getStatus !== 'EM_ANDAMENTO') {
+      throw new BadRequestException('Tarefa não está em andamento');
     }
+
+    // O campo `updatedAt` será automaticamente atualizado pelo Prisma
+    await this.prisma.tarefa.update({
+      where: { id },
+      data: {
+        status: 'CONCLUIDA',
+        concluida: true,
+      },
+    });
   }
 }

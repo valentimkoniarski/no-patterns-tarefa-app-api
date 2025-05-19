@@ -7,6 +7,7 @@ import {
   Put,
   Delete,
   ParseIntPipe,
+  Patch,
 } from '@nestjs/common';
 import { CriarTarefaDto, TarefaService } from './tarefa.service';
 
@@ -22,5 +23,10 @@ export class TarefaController {
   @Post(':id/iniciar')
   iniciar(@Param('id', ParseIntPipe) id: number) {
     return this.service.iniciarTarefa(id);
+  }
+
+  @Patch(':id/concluir')
+  concluir(@Param('id', ParseIntPipe) id: number) {
+    return this.service.concluirTarefa(id);
   }
 }

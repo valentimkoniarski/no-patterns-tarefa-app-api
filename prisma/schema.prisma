@@ -13,8 +13,8 @@ model Tarefa {
   subTitulo       String
   descricao       String
   status          StatusTarefa @default(PENDENTE)
-  dataCriacao     DateTime     @default(now())
-  dataAtualizacao DateTime     @updatedAt
+  dataCriacao     DateTime?    @default(now())
+  dataAtualizacao DateTime?    @updatedAt
   dataPrazo       DateTime?
   concluida       Boolean      @default(false)
   tipo            TarefaTipo
@@ -29,7 +29,6 @@ model Tarefa {
   prioridade        PrioridadeTarefa?
   pontos            Int?
   tempoEstimadoDias Int?
-
 
   @@map("tarefas-no-pattern-db")
 }

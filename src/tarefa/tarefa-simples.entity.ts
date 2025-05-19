@@ -43,8 +43,6 @@ export class TarefaSimples extends TarefaBase {
   static criar(props: TarefaSimplesProps): TarefaSimples {
     return new TarefaSimples({
       ...props,
-      concluida: false,
-      status: StatusTarefa.PENDENTE,
     });
   }
 

@@ -20,13 +20,15 @@ export class TarefaController {
     return this.service.criarTarefa(dto);
   }
 
+  @Patch(':id/concluir')
+  concluir(@Param('id', ParseIntPipe) id: number) {
+    return this.service.concluirTarefa(id);
+  }
+
   @Post(':id/iniciar')
   iniciar(@Param('id', ParseIntPipe) id: number) {
     return this.service.iniciarTarefa(id);
   }
 
-  @Patch(':id/concluir')
-  concluir(@Param('id', ParseIntPipe) id: number) {
-    return this.service.concluirTarefa(id);
-  }
+
 }

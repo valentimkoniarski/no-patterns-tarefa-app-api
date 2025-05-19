@@ -113,7 +113,6 @@ export class TarefaService {
     }
 
     const data = tarefa.toPrisma();
-    // O Prisma automaticamente vai preencher os campos createdAt e updatedAt
     await this.prisma.tarefa.create({ data });
     return tarefa;
   }
@@ -127,7 +126,6 @@ export class TarefaService {
     const tarefa = this.mapearTarefaExistente(tarefaExistente);
     tarefa.iniciarTarefa();
 
-    // O campo `updatedAt` será automaticamente atualizado pelo Prisma
     await this.prisma.tarefa.update({
       where: { id },
       data: {
@@ -143,6 +141,9 @@ export class TarefaService {
     });
 
     const tarefa = this.mapearTarefaExistente(tarefaExistente);
+
+
+    console.log(tarefa);
 
     tarefa.concluirTarefa();
 

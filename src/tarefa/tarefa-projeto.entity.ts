@@ -22,8 +22,6 @@ export class TarefaProjeto extends TarefaBase {
   static criar(props: TarefaProjetoProps): TarefaProjeto {
     return new TarefaProjeto({
       ...props,
-      concluida: false,
-      status: StatusTarefa.PENDENTE,
     });
   }
 
@@ -45,10 +43,33 @@ export class TarefaProjeto extends TarefaBase {
     }
 
     this.status = StatusTarefa.EM_ANDAMENTO;
-    
+
     for (const subtarefa of this.getSubtarefas) {
       subtarefa.status = StatusTarefa.EM_ANDAMENTO;
     }
+
+
+
+  }
+
+  concluirTarefa() {
+    for (const subtarefa of this.getSubtarefas) {
+      if (subtarefa.status !== StatusTarefa.CONCLUIDA) {
+        throw new Error('Tarefa não pode ser concluída');
+      }
+    }
+
+    if (this.concluida) {
+      throw new Error('Tarefa já concluída');
+    }
+
+    console.log(this.status);
+    if (this.status !== StatusTarefa.EM_ANDAMENTO) {
+      throw new Error('Tarefa não pode ser concluída');
+    }
+
+    this.concluida = true;
+    this.status = StatusTarefa.CONCLUIDA;
   }
 
   obterSumario(): SumarioTarefa {

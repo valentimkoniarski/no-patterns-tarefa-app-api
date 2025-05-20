@@ -33,20 +33,8 @@ export class TarefaProjeto extends TarefaBase {
     this.limiteSubtarefas = props.limiteSubtarefas;
   }
 
-  static fromPrisma(raw: Tarefa & { subtarefasIds?: number[] }): TarefaProjeto {
-    return new TarefaProjeto({
-      id: raw.id,
-      titulo: raw.titulo,
-      subtitulo: raw.subTitulo,
-      descricao: raw.descricao,
-      dataPrazo: raw.dataPrazo ?? undefined,
-      concluida: raw.concluida,
-      status: raw.status,
-      tipo: TarefaTipo.PROJETO,
-      limiteSubtarefas: raw.limite ?? undefined,
-      subtarefasIds: raw.subtarefasIds,
-      subtarefas: [],
-    });
+  getStatus() {
+    return this.status;
   }
 
   static atualizar(dto: TarefaProjetoProps) {
@@ -78,14 +66,6 @@ export class TarefaProjeto extends TarefaBase {
     });
   }
 
-  get getStatus() {
-    return this.status;
-  }
-
-  get getSubtarefas() {
-    return this.subtarefas;
-  }
-
   obterSumario() {
     const folhas = this.getSubtarefasAsFolhas();
     const total = folhas.length;
@@ -105,22 +85,11 @@ export class TarefaProjeto extends TarefaBase {
         (acc, tarefaSimples) => acc + tarefaSimples.tempoEstimadoDias,
         0,
       ),
-      progresso: this.getProgresso(),
+      progresso: this.obterProgresso(),
     };
   }
 
-  obterSubtarefasComoFolhas(): TarefaSimplesProps[] {
-    return this.subtarefas as TarefaSimplesProps[];
-  }
-
-  private getSubtarefasAsFolhas(): TarefaSimplesProps[] {
-    if (!Array.isArray(this.subtarefas)) return [];
-    return this.subtarefas.filter(
-      (t): t is TarefaSimplesProps => typeof t !== 'number',
-    );
-  }
-
-  getProgresso(): number {
+  obterProgresso(): number {
     const folhas = this.getSubtarefasAsFolhas();
     const total = folhas.length;
     if (total === 0) return 0;
@@ -142,13 +111,13 @@ export class TarefaProjeto extends TarefaBase {
 
     this.status = StatusTarefa.EM_ANDAMENTO;
 
-    for (const subtarefa of this.getSubtarefas) {
+    for (const subtarefa of this.subtarefas) {
       subtarefa.status = StatusTarefa.EM_ANDAMENTO;
     }
   }
 
   concluirTarefa() {
-    for (const subtarefa of this.getSubtarefas) {
+    for (const subtarefa of this.subtarefas) {
       if (subtarefa.status !== StatusTarefa.CONCLUIDA) {
         throw new Error('Tarefa não pode ser concluída');
       }
@@ -168,16 +137,41 @@ export class TarefaProjeto extends TarefaBase {
 
   toPrisma() {
     return {
+      id: this.id as number,
       titulo: this.titulo,
-      subTitulo: this.subtitulo,
+      subtitulo: this.subtitulo,
       descricao: this.descricao,
-      dataPrazo: this.dataPrazo,
+      dataPrazo: this.dataPrazo ?? null,
       concluida: this.concluida,
       status: this.status,
       tipo: this.tipo,
-      subtarefas: {
-        connect: this.subtarefasIds.map((id) => ({ id })),
-      },
+      tarefaPaiId: null,
+      prioridade: null,
+      pontos: 0,
+      tempoEstimadoDias: 0,
+      limite: this.limiteSubtarefas ?? null,
+      dataAtualizacao: new Date(),
+      dataCriacao: new Date(),
     };
+  }
+
+  clonar(mods?: Partial<TarefaProjetoProps>): TarefaProjeto {
+    return new TarefaProjeto({
+      titulo: mods?.titulo ?? this.titulo,
+      subtitulo: mods?.subtitulo ?? this.subtitulo,
+      descricao: mods?.descricao ?? this.descricao,
+      dataPrazo: mods?.dataPrazo ?? this.dataPrazo,
+      concluida: false,
+      status: StatusTarefa.PENDENTE,
+      tipo: TarefaTipo.PROJETO,
+      limiteSubtarefas: mods?.limiteSubtarefas ?? this.limiteSubtarefas,
+    });
+  }
+
+  private getSubtarefasAsFolhas(): TarefaSimplesProps[] {
+    if (!Array.isArray(this.subtarefas)) return [];
+    return this.subtarefas.filter(
+      (t): t is TarefaSimplesProps => typeof t !== 'number',
+    );
   }
 }

@@ -10,7 +10,7 @@ generator client {
 model Tarefa {
   id              Int          @id @default(autoincrement())
   titulo          String
-  subTitulo       String
+  subtitulo       String
   descricao       String
   status          StatusTarefa @default(PENDENTE)
   dataCriacao     DateTime?    @default(now())
@@ -20,10 +20,10 @@ model Tarefa {
   tipo            TarefaTipo
 
   // tarefas composta
-  tarefaPaiId Int?
-  tarefaPai   Tarefa?  @relation("Subtarefas", fields: [tarefaPaiId], references: [id], onDelete: Cascade)
-  subtarefas  Tarefa[] @relation("Subtarefas")
-  limite      Int?
+  tarefaPaiId      Int?
+  tarefaPai        Tarefa?  @relation("Subtarefas", fields: [tarefaPaiId], references: [id], onDelete: Cascade)
+  subtarefas       Tarefa[] @relation("Subtarefas")
+  limiteSubtarefas Int?     @map("limite")
 
   // tarefa folha
   prioridade        PrioridadeTarefa?

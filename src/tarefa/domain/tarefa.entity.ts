@@ -44,4 +44,8 @@ export abstract class TarefaBase {
     this.concluida = props.concluida ?? false;
     this.tipo = props.tipo;
   }
+
+  getStatus() {
+    return this.status
+  }
 }

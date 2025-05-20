@@ -41,7 +41,7 @@ export class TarefaSimples extends TarefaBase {
     return new TarefaSimples({
       id: raw.id,
       titulo: raw.titulo,
-      subtitulo: raw.subTitulo,
+      subtitulo: raw.subtitulo,
       descricao: raw.descricao,
       dataPrazo: raw.dataPrazo ?? undefined,
       concluida: raw.concluida,
@@ -83,7 +83,7 @@ export class TarefaSimples extends TarefaBase {
     });
   }
 
-  get getStatus() {
+  getStatus() {
     return this.status;
   }
 
@@ -129,27 +129,11 @@ export class TarefaSimples extends TarefaBase {
     }
   }
 
-  // clone(mods: Partial<TarefaSimplesProps>): TarefaSimples {
-  //   return new TarefaSimples({
-  //     id: this.id,
-  //     titulo: mods.titulo ?? this.titulo,
-  //     subtitulo: mods.subtitulo ?? this.subtitulo,
-  //     descricao: mods.descricao ?? this.descricao,
-  //     dataPrazo: mods.dataPrazo ?? this.dataPrazo,
-  //     concluida: this.concluida,
-  //     status: this.status,
-  //     tarefaPaiId: this.tarefaPaiId,
-  //     prioridade: mods.prioridade ?? this.prioridade,
-  //     pontos: mods.pontos ?? this.pontos,
-  //     tempoEstimadoDias: mods.tempoEstimadoDias ?? this.tempoEstimadoDias,
-  //   });
-  // }
-
   toPrisma(): Tarefa {
     return {
       id: this.id as number,
       titulo: this.titulo,
-      subTitulo: this.subtitulo,
+      subtitulo: this.subtitulo,
       descricao: this.descricao,
       dataPrazo: this.dataPrazo ?? null,
       concluida: this.concluida,
@@ -159,9 +143,25 @@ export class TarefaSimples extends TarefaBase {
       prioridade: this.prioridade,
       pontos: this.pontos,
       tempoEstimadoDias: this.tempoEstimadoDias,
-      limite: null,
+      limiteSubtarefas: null,
       dataAtualizacao: new Date(),
       dataCriacao: new Date(),
     };
+  }
+
+  clonar(mods?: Partial<TarefaSimplesProps>): TarefaSimples {
+    return new TarefaSimples({
+      titulo: mods?.titulo ?? this.titulo,
+      subtitulo: mods?.subtitulo ?? this.subtitulo,
+      descricao: mods?.descricao ?? this.descricao,
+      dataPrazo: mods?.dataPrazo ?? this.dataPrazo,
+      concluida: false,
+      status: StatusTarefa.PENDENTE,
+      tipo: TarefaTipo.SIMPLES,
+      tarefaPaiId: mods?.tarefaPaiId ?? this.tarefaPaiId,
+      prioridade: mods?.prioridade ?? this.prioridade,
+      pontos: mods?.pontos ?? this.pontos,
+      tempoEstimadoDias: mods?.tempoEstimadoDias ?? this.tempoEstimadoDias,
+    });
   }
 }

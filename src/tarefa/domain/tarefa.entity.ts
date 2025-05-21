@@ -34,6 +34,10 @@ export abstract class TarefaBase {
     if (!props.titulo) throw new Error('Título é obrigatório');
     if (!props.subtitulo) throw new Error('Subtítulo é obrigatório');
     if (!props.descricao) throw new Error('Descrição é obrigatória');
+    if (!props.tipo) throw new Error('Tipo é obrigatório');
+    if (props.dataPrazo && props.dataPrazo < new Date()) {
+      throw new Error('Data de prazo não pode ser no passado');
+    }
 
     this.id = props.id;
     this.titulo = props.titulo;

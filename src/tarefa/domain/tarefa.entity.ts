@@ -46,6 +46,22 @@ export abstract class TarefaBase {
   }
 
   getStatus() {
-    return this.status
+    return this.status;
+  }
+
+  getTitulo() {
+    return this.titulo;
+  }
+
+  getSubtitulo() {
+    return this.subtitulo;
+  }
+
+  getDescricao() {
+    return this.descricao;
+  }
+
+  getConcluida() {
+    return this.concluida;
   }
 }

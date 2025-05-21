@@ -9,14 +9,12 @@ describe('TarefaService (Integração)', () => {
   let prisma: PrismaService;
 
   beforeAll(async () => {
-    // 1) Definir NODE_ENV e carregar .env.test
     process.env.NODE_ENV = 'test';
     process.env.DATABASE_URL = 'file:./dev-test.db?mode=memory&cache=shared';
 
-    // 2) Aplicar schema direto ao DB de teste
     execSync('npx prisma db push', {
       env: process.env,
-      stdio: 'inherit', // para ver logs, opcional
+      stdio: 'inherit',
     });
 
     // 3) Montar o TestingModule
@@ -35,14 +33,11 @@ describe('TarefaService (Integração)', () => {
   });
 
   beforeEach(async () => {
-    // Limpa dados entre testes
     await prisma.tarefa.deleteMany();
   });
 
   afterAll(async () => {
-    // Desconecta do Prisma
     await prisma.$disconnect();
-    // Nenhum arquivo pra apagar em memory mode
   });
 
   describe('Tratamento de Erros', () => {
@@ -52,7 +47,7 @@ describe('TarefaService (Integração)', () => {
         subtitulo: 'Sub',
         descricao: 'Desc',
         tipo: 'SIMPLES',
-        prioridade: 'ALTA', // adapte conforme seu enum
+        prioridade: 'ALTA',
         pontos: 3,
         tempoEstimadoDias: 2,
       });

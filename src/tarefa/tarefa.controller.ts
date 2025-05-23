@@ -12,8 +12,14 @@ import {
   DefaultValuePipe,
   ParseBoolPipe,
   ParseEnumPipe,
+  BadRequestException,
 } from '@nestjs/common';
-import { FiltrosTarefa, TarefaDto, TarefaService } from './tarefa.service';
+import {
+  FiltrosTarefa,
+  TarefaDto,
+  TarefaService,
+  FilterOp,
+} from './tarefa.service';
 import { StatusTarefa, PrioridadeTarefa } from '@prisma/client';
 
 @Controller('tarefas')
@@ -24,32 +30,16 @@ export class TarefaController {
   async listarTarefas(
     @Query('pagina', new DefaultValuePipe(1), ParseIntPipe) pagina: number,
     @Query('limite', new DefaultValuePipe(10), ParseIntPipe) limite: number,
-    @Query('status', new ParseEnumPipe(StatusTarefa, { optional: true }))
-    status?: StatusTarefa,
-    @Query(
-      'tipo',
-      new ParseEnumPipe(['SIMPLES', 'PROJETO'], { optional: true }),
-    )
-    tipo?: 'SIMPLES' | 'PROJETO',
-    @Query(
-      'prioridade',
-      new ParseEnumPipe(PrioridadeTarefa, { optional: true }),
-    )
-    prioridade?: PrioridadeTarefa,
-    @Query('concluida', new ParseBoolPipe({ optional: true }))
-    concluida?: boolean,
-    @Query('dataInicio') dataInicio?: string,
-    @Query('dataFim') dataFim?: string,
+    @Query('filtros') filtrosJson?: string,
   ) {
-    const filtros: FiltrosTarefa = {
-      ...(status && { status }),
-      ...(tipo && { tipo }),
-      ...(prioridade && { prioridade }),
-      ...(concluida !== undefined && { concluida }),
-      ...(dataInicio && { dataInicio: new Date(dataInicio) }),
-      ...(dataFim && { dataFim: new Date(dataFim) }),
-    };
-
+    let filtros: FilterOp[] | undefined;
+    if (filtrosJson) {
+      try {
+        filtros = JSON.parse(filtrosJson) as FilterOp[];
+      } catch {
+        throw new BadRequestException('Formato de filtros inválido');
+      }
+    }
     return this.tarefaService.listarTarefas(pagina, limite, filtros);
   }
 

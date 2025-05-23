@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from "../prisma/prisma.service";
+import { PrismaService } from '../prisma/prisma.service';
 import { TarefaSimples } from './domain/tarefa-simples.entity';
 import { TarefaProjeto } from './domain/tarefa-projeto.entity';
 import { PrioridadeTarefa, StatusTarefa, Tarefa } from '@prisma/client';
@@ -45,6 +45,20 @@ export type TarefaDto = {
     }
 );
 
+export type Operator = 'eq' | 'contains' | 'gt' | 'lt' | 'range';
+
+export interface FilterOp {
+  field: string;
+  op: Operator;
+  value: any;
+}
+
+export interface ListarTarefasDTO {
+  pagina?: number;
+  limite?: number;
+  filtros?: FilterOp[];
+}
+
 @Injectable()
 export class TarefaService {
   constructor(private prisma: PrismaService) {}
@@ -52,57 +66,50 @@ export class TarefaService {
   async listarTarefas(
     pagina: number = 1,
     limite: number = 10,
-    filtros?: FiltrosTarefa,
+    filtros?: FilterOp[],
   ) {
     const skip = (pagina - 1) * limite;
-
     const where: any = {};
 
     if (filtros) {
-      if (filtros.status) {
-        where.status = filtros.status;
-      }
-
-      if (filtros.tipo) {
-        where.tipo = filtros.tipo;
-      }
-
-      if (filtros.prioridade) {
-        where.prioridade = filtros.prioridade;
-      }
-
-      if (filtros.concluida !== undefined) {
-        where.concluida = filtros.concluida;
-      }
-
-      if (filtros.dataInicio || filtros.dataFim) {
-        where.dataPrazo = {};
-        if (filtros.dataInicio) {
-          where.dataPrazo.gte = filtros.dataInicio;
-        }
-        if (filtros.dataFim) {
-          where.dataPrazo.lte = filtros.dataFim;
+      for (const f of filtros) {
+        switch (f.op) {
+          case 'eq':
+            where[f.field] = f.value;
+            break;
+          case 'contains':
+            where[f.field] = { contains: String(f.value) };
+            break;
+          case 'gt':
+            where[f.field] = { gt: f.value };
+            break;
+          case 'lt':
+            where[f.field] = { lt: f.value };
+            break;
+          case 'range':
+            where[f.field] = {};
+            if (f.value.start !== undefined) where[f.field].gte = f.value.start;
+            if (f.value.end !== undefined) where[f.field].lte = f.value.end;
+            break;
+          default:
+            throw new BadRequestException(`Operador inválido: ${f.op}`);
         }
       }
     }
 
-    const [tarefas, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       this.prisma.tarefa.findMany({
         where,
         skip,
         take: limite,
-        include: {
-          subtarefas: true,
-        },
-        orderBy: {
-          id: 'desc',
-        },
+        include: { subtarefas: true },
+        orderBy: { id: 'desc' },
       }),
       this.prisma.tarefa.count({ where }),
     ]);
 
     return {
-      tarefas: tarefas.map((tarefa) => this.mapearTarefaExistente(tarefa)),
+      tarefas: rows.map((t) => this.mapearTarefaExistente(t)),
       paginacao: {
         pagina,
         limite,

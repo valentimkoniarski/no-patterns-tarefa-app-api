@@ -4,9 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { TarefaSimples } from './domain/tarefa-simples.entity';
-import { TarefaProjeto } from './domain/tarefa-projeto.entity';
-import { PrioridadeTarefa, StatusTarefa, Tarefa } from '@prisma/client';
+import { PrioridadeTarefa, StatusTarefa, Tarefa as TarefaPrisma } from '@prisma/client';
+import { Tarefa, TarefaProps } from './tarefa';
 
 export interface FiltrosTarefa {
   status?: StatusTarefa;
@@ -24,7 +23,7 @@ export type TarefaDto = {
   descricao: string;
   dataPrazo?: Date;
   concluida?: boolean;
-  tarefaPai?: number;
+  tarefaPaiId?: number;
   status?: StatusTarefa;
 } & (
   | {
@@ -134,43 +133,38 @@ export class TarefaService {
   }
 
   async criarTarefa(dto: TarefaDto) {
-    let tarefa;
-    if (dto.tipo === 'SIMPLES') {
-      tarefa = new TarefaSimples({
-        titulo: dto.titulo,
-        subtitulo: dto.subtitulo,
-        descricao: dto.descricao,
-        dataPrazo: dto.dataPrazo,
-        concluida: dto.concluida ?? false,
+    const props: TarefaProps = {
+      titulo: dto.titulo,
+      subtitulo: dto.subtitulo,
+      descricao: dto.descricao,
+      dataPrazo: dto.dataPrazo,
+      concluida: dto.concluida ?? false,
+      status: dto.status ?? StatusTarefa.PENDENTE,
+      tarefaPai: dto.tarefaPaiId ? { id: dto.tarefaPaiId } as any : undefined,
+      ...(dto.tipo === 'SIMPLES' && {
         prioridade: dto.prioridade,
         pontos: dto.pontos,
         tempoEstimadoDias: dto.tempoEstimadoDias,
-        tipo: 'SIMPLES',
-      });
-    } else if (dto.tipo === 'PROJETO') {
-      if (dto.subtarefasIds && dto.subtarefasIds.length > 0) {
-        await this.validarSubtarefas(dto.subtarefasIds);
-      }
-
-      tarefa = new TarefaProjeto({
-        titulo: dto.titulo,
-        subtitulo: dto.subtitulo,
-        descricao: dto.descricao,
-        dataPrazo: dto.dataPrazo,
-        concluida: dto.concluida ?? false,
+      }),
+      ...(dto.tipo === 'PROJETO' && {
+        subtarefas: dto.subtarefasIds ? dto.subtarefasIds.map(id => ({ id } as any)) : [],
         limiteSubtarefas: dto.limite,
-        subtarefasIds: dto.subtarefasIds ?? [],
-        tipo: 'PROJETO',
-      });
-    }
+      }),
+    };
 
-    if (dto.tarefaPai) {
+    const tarefa = new Tarefa(props);
+
+    if (dto.tarefaPaiId) {
       const pai = await this.prisma.tarefa.findUnique({
-        where: { id: dto.tarefaPai },
+        where: { id: dto.tarefaPaiId },
       });
       if (!pai) throw new NotFoundException('Tarefa pai não encontrada');
-      if (pai.tipo !== dto.tipo)
-        throw new BadRequestException('Tipo de pai inválido');
+      if (pai.tipo !== 'PROJETO')
+        throw new BadRequestException('Tarefa pai deve ser do tipo PROJETO');
+    }
+
+    if (dto.tipo === 'PROJETO' && dto.subtarefasIds) {
+      await this.validarSubtarefas(dto.subtarefasIds);
     }
 
     const data = tarefa.toPrisma();
@@ -178,25 +172,27 @@ export class TarefaService {
     return tarefa;
   }
 
-  async atualizarTarefa(id: number, dto: TarefaDto) {
+  async atualizarTarefa(id: number, dto: Partial<TarefaDto>) {
     const tarefaPrisma = await this.prisma.tarefa.findUniqueOrThrow({
       where: { id },
       include: { subtarefas: true },
     });
 
-    const dtoCompleto = {
-      ...tarefaPrisma,
+    const propsAtualizados: TarefaProps = {
+      ...this.mapearTarefaExistente(tarefaPrisma),
       ...dto,
-    } as unknown as TarefaDto;
+      status: dto.status ?? this.mapearTarefaExistente(tarefaPrisma).status,
+      concluida: dto.concluida ?? this.mapearTarefaExistente(tarefaPrisma).concluida,
+      subtarefas: dto.subtarefasIds
+        ? dto.subtarefasIds.map(id => ({ id } as any))
+        : tarefaPrisma.subtarefas?.map(st => ({ id: st.id } as any)) || [],
+    };
 
-    if (dtoCompleto.subtarefasIds && dtoCompleto.subtarefasIds.length > 0) {
-      await this.validarSubtarefas(dtoCompleto.subtarefasIds);
+    const tarefa = new Tarefa(propsAtualizados);
+
+    if (dto.subtarefasIds) {
+      await this.validarSubtarefas(dto.subtarefasIds);
     }
-
-    const tarefa =
-      tarefaPrisma.tipo === 'SIMPLES'
-        ? TarefaSimples.atualizar(dtoCompleto)
-        : TarefaProjeto.atualizar(dtoCompleto);
 
     await this.prisma.tarefa.update({
       where: { id },
@@ -215,12 +211,12 @@ export class TarefaService {
     });
 
     const tarefa = this.mapearTarefaExistente(tarefaExistente);
-    tarefa.iniciarTarefa();
+    tarefa.iniciar();
 
     await this.prisma.tarefa.update({
       where: { id },
       data: {
-        status: tarefa.getStatus(),
+        status: tarefa.status,
       },
     });
   }
@@ -232,18 +228,18 @@ export class TarefaService {
     });
 
     const tarefa = this.mapearTarefaExistente(tarefaExistente);
-    tarefa.concluirTarefa();
+    tarefa.concluir();
 
     await this.prisma.tarefa.update({
       where: { id },
       data: {
-        status: 'CONCLUIDA',
-        concluida: true,
+        status: tarefa.status,
+        concluida: tarefa.concluida,
       },
     });
   }
 
-  async clonarTarefa(id: number, dto?: TarefaDto) {
+  async clonarTarefa(id: number, dto?: Partial<TarefaDto>) {
     const tarefaExistente = await this.prisma.tarefa.findUniqueOrThrow({
       where: { id },
       include: { subtarefas: true },
@@ -256,37 +252,28 @@ export class TarefaService {
     return tarefaClonada;
   }
 
-  private mapearTarefaExistente(
-    tarefaPrisma: Tarefa & { subtarefas?: { id: number }[] },
-  ) {
-    const tarefaBase = {
+  private mapearTarefaExistente(tarefaPrisma: TarefaPrisma & { subtarefas?: { id: number }[] }) {
+    const props: TarefaProps = {
+      id: tarefaPrisma.id,
       titulo: tarefaPrisma.titulo,
       subtitulo: tarefaPrisma.subtitulo,
       descricao: tarefaPrisma.descricao,
       dataPrazo: tarefaPrisma.dataPrazo ?? undefined,
       status: tarefaPrisma.status,
-      tipo: tarefaPrisma.tipo,
-    };
-
-    if (tarefaPrisma.tipo === 'PROJETO') {
-      return new TarefaProjeto({
-        ...tarefaBase,
-        limiteSubtarefas: tarefaPrisma.limiteSubtarefas ?? undefined,
-        subtarefasIds: tarefaPrisma.subtarefas
-          ? tarefaPrisma.subtarefas.map((st) => st.id)
-          : [],
-      });
-    } else if (tarefaPrisma.tipo === 'SIMPLES') {
-      return new TarefaSimples({
-        ...tarefaBase,
-        tarefaPaiId: tarefaPrisma.tarefaPaiId ?? undefined,
+      concluida: tarefaPrisma.concluida,
+      tarefaPai: tarefaPrisma.tarefaPaiId ? { id: tarefaPrisma.tarefaPaiId } as any : undefined,
+      ...(tarefaPrisma.tipo === 'SIMPLES' && {
         prioridade: tarefaPrisma.prioridade ?? PrioridadeTarefa.BAIXA,
         pontos: tarefaPrisma.pontos ?? 0,
         tempoEstimadoDias: tarefaPrisma.tempoEstimadoDias ?? 0,
-      });
-    }
+      }),
+      ...(tarefaPrisma.tipo === 'PROJETO' && {
+        subtarefas: tarefaPrisma.subtarefas ? tarefaPrisma.subtarefas.map(st => ({ id: st.id } as any)) : [],
+        limiteSubtarefas: tarefaPrisma.limiteSubtarefas ?? undefined,
+      }),
+    };
 
-    throw new BadRequestException('Tipo de tarefa inválido');
+    return new Tarefa(props);
   }
 
   private async validarSubtarefas(subtarefasIds: number[]) {

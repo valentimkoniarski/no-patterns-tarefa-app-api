@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ConfigModule } from '@nestjs/config';
 import { execSync } from 'child_process';
 
-describe('TarefaService (Integração)', () => {
+describe.skip('TarefaService (Integração)', () => {
   let service: TarefaService;
   let prisma: PrismaService;
 

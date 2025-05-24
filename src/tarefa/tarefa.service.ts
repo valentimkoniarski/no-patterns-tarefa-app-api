@@ -165,8 +165,8 @@ export class TarefaService {
     const tarefa = new Tarefa(props);
 
     const data = tarefa.toPrisma();
-    await this.prisma.tarefa.create({ data });
-    return tarefa;
+    const tarefaCriada = await this.prisma.tarefa.create({ data });
+    return this.mapearDominio(tarefaCriada);
   }
 
   async atualizarTarefa(id: number, dto: Partial<TarefaDto>) {

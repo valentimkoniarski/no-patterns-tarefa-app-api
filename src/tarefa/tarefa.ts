@@ -33,8 +33,8 @@ export class Tarefa {
   readonly tarefaPai?: Tarefa;
 
   readonly tipo: TarefaTipo;
-  private _status: StatusTarefa;
-  private _concluida: boolean;
+  private status: StatusTarefa;
+  private concluida: boolean;
 
   readonly prioridade: PrioridadeTarefa;
   readonly pontos: number;
@@ -51,8 +51,8 @@ export class Tarefa {
     this.subtitulo = props.subtitulo;
     this.descricao = props.descricao;
     this.dataPrazo = props.dataPrazo;
-    this._concluida = props.concluida;
-    this._status = props.status;
+    this.concluida = props.concluida;
+    this.status = props.status;
     this.tipo = props.tipo;
     this.subtarefas = [];
 
@@ -183,20 +183,20 @@ export class Tarefa {
     }
   }
 
-  get status(): StatusTarefa {
-    return this._status;
+  get getStatus(): StatusTarefa {
+    return this.status;
   }
 
-  get concluida(): boolean {
-    return this._concluida;
+  get getConcluida(): boolean {
+    return this.concluida;
   }
 
-  private set status(status: StatusTarefa) {
-    this._status = status;
+  private set setStatus(status: StatusTarefa) {
+    this.status = status;
   }
 
-  private set concluida(concluida: boolean) {
-    this._concluida = concluida;
+  private set setConcluida(concluida: boolean) {
+    this.concluida = concluida;
   }
 
   adicionarSubtarefa(subtarefa: Tarefa): void {
@@ -205,47 +205,47 @@ export class Tarefa {
   }
 
   iniciar(): void {
-    if (this._status === StatusTarefa.PENDENTE) {
-      this._status = StatusTarefa.EM_ANDAMENTO;
+    if (this.status === StatusTarefa.PENDENTE) {
+      this.status = StatusTarefa.EM_ANDAMENTO;
       if (this.tipo === TarefaTipo.PROJETO) {
         for (const subtarefa of this.subtarefas) {
           subtarefa.iniciar();
         }
       }
-    } else if (this._status === StatusTarefa.EM_ANDAMENTO) {
+    } else if (this.status === StatusTarefa.EM_ANDAMENTO) {
       throw new CampoInvalidoException(
         'status',
         'Já possui tarefas em andamento',
       );
-    } else if (this._status === StatusTarefa.CONCLUIDA) {
+    } else if (this.status === StatusTarefa.CONCLUIDA) {
       throw new CampoInvalidoException('status', 'Já possui tarefas concluída');
     }
   }
 
   concluir(): void {
-    if (this._status === StatusTarefa.PENDENTE) {
+    if (this.status === StatusTarefa.PENDENTE) {
       throw new CampoInvalidoException(
         'status',
         'Não pode concluir antes de iniciar',
       );
-    } else if (this._status === StatusTarefa.EM_ANDAMENTO) {
+    } else if (this.status === StatusTarefa.EM_ANDAMENTO) {
       if (this.tipo === TarefaTipo.PROJETO) {
         for (const sub of this.subtarefas) {
           sub.concluir();
         }
       }
-      this._status = StatusTarefa.CONCLUIDA;
-      this._concluida = true;
-    } else if (this._status === StatusTarefa.CONCLUIDA) {
+      this.status = StatusTarefa.CONCLUIDA;
+      this.concluida = true;
+    } else if (this.status === StatusTarefa.CONCLUIDA) {
       throw new CampoInvalidoException('status', 'Já concluída');
     }
   }
 
   obterProgresso() {
     if (this.tipo === TarefaTipo.SIMPLES) {
-      return this._concluida
+      return this.concluida
         ? 100
-        : this._status === StatusTarefa.EM_ANDAMENTO
+        : this.status === StatusTarefa.EM_ANDAMENTO
           ? 50
           : 0;
     }
@@ -253,7 +253,7 @@ export class Tarefa {
     if (this.tipo === TarefaTipo.PROJETO) {
       const total = this.subtarefas.length || 1;
       const concluidas = this.subtarefas.filter(
-        (t) => t._status === StatusTarefa.CONCLUIDA,
+        (t) => t.status === StatusTarefa.CONCLUIDA,
       ).length;
       return Math.round((concluidas / total) * 100);
     }
@@ -263,8 +263,8 @@ export class Tarefa {
     if (this.tipo === TarefaTipo.SIMPLES) {
       return {
         totalSubtarefas: 1,
-        concluidas: this._status === StatusTarefa.CONCLUIDA ? 1 : 0,
-        pendentes: this._status !== StatusTarefa.CONCLUIDA ? 1 : 0,
+        concluidas: this.status === StatusTarefa.CONCLUIDA ? 1 : 0,
+        pendentes: this.status !== StatusTarefa.CONCLUIDA ? 1 : 0,
         pontosTotais: this.pontos,
         estimativaTotalDias: this.tempoEstimadoDias,
         progresso: this.obterProgresso(),
@@ -274,7 +274,7 @@ export class Tarefa {
     if (this.tipo === TarefaTipo.PROJETO) {
       const total = this.subtarefas.length;
       const concluidas = this.subtarefas.filter(
-        (t) => t._status === StatusTarefa.CONCLUIDA,
+        (t) => t.status === StatusTarefa.CONCLUIDA,
       ).length;
       const pontosTotais = this.subtarefas.reduce(
         (acc, t) => acc + (t.pontos ?? 0),

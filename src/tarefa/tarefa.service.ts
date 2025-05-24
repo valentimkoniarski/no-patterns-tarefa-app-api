@@ -190,7 +190,7 @@ export class TarefaService {
       subtarefas: subtarefasCompletas,
     };
 
-    const tarefa = new Tarefa(this.mapearDominio(propsAtualizados));
+    const tarefa = this.mapearDominio(propsAtualizados)
 
     await this.prisma.tarefa.update({
       where: { id },
@@ -227,12 +227,12 @@ export class TarefaService {
     await this.prisma.tarefa.update({
       where: { id },
       data: {
-        status: tarefa.status,
+        status: tarefa.getStatus,
         subtarefas: {
           updateMany: tarefa.subtarefas.map((subtarefa) => ({
             where: { id: subtarefa.id },
             data: {
-              status: subtarefa.status,
+              status: subtarefa.getStatus,
             },
           })),
         },
@@ -252,14 +252,14 @@ export class TarefaService {
     await this.prisma.tarefa.update({
       where: { id },
       data: {
-        status: tarefa.status,
-        concluida: tarefa.concluida,
+        status: tarefa.getStatus,
+        concluida: tarefa.getConcluida,
         subtarefas: {
           updateMany: tarefa.subtarefas.map((subtarefa) => ({
             where: { id: subtarefa.id },
             data: {
-              status: subtarefa.status,
-              concluida: subtarefa.concluida,
+              status: subtarefa.getStatus,
+              concluida: subtarefa.getConcluida,
             },
           })),
         },

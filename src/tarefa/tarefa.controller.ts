@@ -10,17 +10,9 @@ import {
   Patch,
   Query,
   DefaultValuePipe,
-  ParseBoolPipe,
-  ParseEnumPipe,
   BadRequestException,
 } from '@nestjs/common';
-import {
-  FiltrosTarefa,
-  TarefaDto,
-  TarefaService,
-  FilterOp,
-} from './tarefa.service';
-import { StatusTarefa, PrioridadeTarefa } from '@prisma/client';
+import { TarefaDto, TarefaService, FilterOp } from './tarefa.service';
 
 @Controller('tarefas')
 export class TarefaController {

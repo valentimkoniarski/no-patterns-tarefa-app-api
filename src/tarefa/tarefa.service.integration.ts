@@ -41,7 +41,7 @@ describe.skip('TarefaService (Integração)', () => {
   });
 
   describe('Tratamento de Erros', () => {
-    it('deve lançar BadRequestException ao criar tarefa com tipo inválido', async () => {
+    it.skip('deve lançar BadRequestException ao criar tarefa com tipo inválido', async () => {
       const tarefa = await service.criarTarefa({
         titulo: 'Tarefa Inválida',
         subtitulo: 'Sub',

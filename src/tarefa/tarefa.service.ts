@@ -4,7 +4,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { PrioridadeTarefa, StatusTarefa, Tarefa as TarefaPrisma } from '@prisma/client';
+import {
+  PrioridadeTarefa,
+  StatusTarefa,
+  Tarefa as TarefaPrisma,
+  TarefaTipo,
+} from '@prisma/client';
 import { Tarefa, TarefaProps } from './tarefa';
 
 export interface FiltrosTarefa {
@@ -71,27 +76,29 @@ export class TarefaService {
     const where: any = {};
 
     if (filtros) {
-      for (const f of filtros) {
-        switch (f.op) {
+      for (const filtro of filtros) {
+        switch (filtro.op) {
           case 'eq':
-            where[f.field] = f.value;
+            where[filtro.field] = filtro.value;
             break;
           case 'contains':
-            where[f.field] = { contains: String(f.value) };
+            where[filtro.field] = { contains: String(filtro.value) };
             break;
           case 'gt':
-            where[f.field] = { gt: f.value };
+            where[filtro.field] = { gt: filtro.value };
             break;
           case 'lt':
-            where[f.field] = { lt: f.value };
+            where[filtro.field] = { lt: filtro.value };
             break;
           case 'range':
-            where[f.field] = {};
-            if (f.value.start !== undefined) where[f.field].gte = f.value.start;
-            if (f.value.end !== undefined) where[f.field].lte = f.value.end;
+            where[filtro.field] = {};
+            if (filtro.value.start !== undefined)
+              where[filtro.field].gte = filtro.value.start;
+            if (filtro.value.end !== undefined)
+              where[filtro.field].lte = filtro.value.end;
             break;
           default:
-            throw new BadRequestException(`Operador inválido: ${f.op}`);
+            throw new BadRequestException(`Operador inválido: ${filtro.op}`);
         }
       }
     }
@@ -108,7 +115,7 @@ export class TarefaService {
     ]);
 
     return {
-      tarefas: rows.map((t) => this.mapearTarefaExistente(t)),
+      tarefas: rows.map((t) => this.mapearDominio(t)),
       paginacao: {
         pagina,
         limite,
@@ -123,7 +130,7 @@ export class TarefaService {
       where: { id },
       include: { subtarefas: true },
     });
-    const tarefa = this.mapearTarefaExistente(tarefaExistente);
+    const tarefa = this.mapearDominio(tarefaExistente);
     const sumario = tarefa.obterSumario();
 
     return {
@@ -139,33 +146,23 @@ export class TarefaService {
       descricao: dto.descricao,
       dataPrazo: dto.dataPrazo,
       concluida: dto.concluida ?? false,
+      tipo: dto.tipo,
       status: dto.status ?? StatusTarefa.PENDENTE,
-      tarefaPai: dto.tarefaPaiId ? { id: dto.tarefaPaiId } as any : undefined,
-      ...(dto.tipo === 'SIMPLES' && {
+      tarefaPai: dto.tarefaPaiId ? ({ id: dto.tarefaPaiId } as any) : undefined,
+      ...(dto.tipo === TarefaTipo.SIMPLES && {
         prioridade: dto.prioridade,
         pontos: dto.pontos,
         tempoEstimadoDias: dto.tempoEstimadoDias,
       }),
-      ...(dto.tipo === 'PROJETO' && {
-        subtarefas: dto.subtarefasIds ? dto.subtarefasIds.map(id => ({ id } as any)) : [],
+      ...(dto.tipo === TarefaTipo.PROJETO && {
+        subtarefas: dto.subtarefasIds
+          ? dto.subtarefasIds.map((id) => ({ id }) as any)
+          : [],
         limiteSubtarefas: dto.limite,
       }),
     };
 
     const tarefa = new Tarefa(props);
-
-    if (dto.tarefaPaiId) {
-      const pai = await this.prisma.tarefa.findUnique({
-        where: { id: dto.tarefaPaiId },
-      });
-      if (!pai) throw new NotFoundException('Tarefa pai não encontrada');
-      if (pai.tipo !== 'PROJETO')
-        throw new BadRequestException('Tarefa pai deve ser do tipo PROJETO');
-    }
-
-    if (dto.tipo === 'PROJETO' && dto.subtarefasIds) {
-      await this.validarSubtarefas(dto.subtarefasIds);
-    }
 
     const data = tarefa.toPrisma();
     await this.prisma.tarefa.create({ data });
@@ -178,26 +175,40 @@ export class TarefaService {
       include: { subtarefas: true },
     });
 
-    const propsAtualizados: TarefaProps = {
-      ...this.mapearTarefaExistente(tarefaPrisma),
+    const subtarefasCompletas = dto.subtarefasIds
+      ? await this.prisma.tarefa.findMany({
+          where: {
+            id: { in: dto.subtarefasIds },
+          },
+          include: { tarefaPai: true },
+        })
+      : [];
+
+    const propsAtualizados = {
+      ...tarefaPrisma,
       ...dto,
-      status: dto.status ?? this.mapearTarefaExistente(tarefaPrisma).status,
-      concluida: dto.concluida ?? this.mapearTarefaExistente(tarefaPrisma).concluida,
-      subtarefas: dto.subtarefasIds
-        ? dto.subtarefasIds.map(id => ({ id } as any))
-        : tarefaPrisma.subtarefas?.map(st => ({ id: st.id } as any)) || [],
+      subtarefas: subtarefasCompletas,
     };
 
-    const tarefa = new Tarefa(propsAtualizados);
-
-    if (dto.subtarefasIds) {
-      await this.validarSubtarefas(dto.subtarefasIds);
-    }
+    const tarefa = new Tarefa(this.mapearDominio(propsAtualizados));
 
     await this.prisma.tarefa.update({
       where: { id },
       data: tarefa.toPrisma(),
     });
+
+    if (dto.subtarefasIds) {
+      await this.prisma.tarefa.update({
+        where: { id },
+        data: {
+          subtarefas: {
+            connect: dto.subtarefasIds.map((id) => ({ id })),
+          },
+        },
+      });
+    }
+
+    return tarefa;
   }
 
   async apagarTarefa(id: number) {
@@ -210,7 +221,7 @@ export class TarefaService {
       include: { subtarefas: true },
     });
 
-    const tarefa = this.mapearTarefaExistente(tarefaExistente);
+    const tarefa = this.mapearDominio(tarefaExistente);
     tarefa.iniciar();
 
     await this.prisma.tarefa.update({
@@ -227,7 +238,7 @@ export class TarefaService {
       include: { subtarefas: true },
     });
 
-    const tarefa = this.mapearTarefaExistente(tarefaExistente);
+    const tarefa = this.mapearDominio(tarefaExistente);
     tarefa.concluir();
 
     await this.prisma.tarefa.update({
@@ -245,14 +256,16 @@ export class TarefaService {
       include: { subtarefas: true },
     });
 
-    const tarefa = this.mapearTarefaExistente(tarefaExistente);
+    const tarefa = this.mapearDominio(tarefaExistente);
     const tarefaClonada = tarefa.clonar(dto);
     const data = tarefaClonada.toPrisma();
     await this.prisma.tarefa.create({ data });
     return tarefaClonada;
   }
 
-  private mapearTarefaExistente(tarefaPrisma: TarefaPrisma & { subtarefas?: { id: number }[] }) {
+  private mapearDominio(
+    tarefaPrisma: TarefaPrisma & { subtarefas?: TarefaPrisma[] },
+  ) {
     const props: TarefaProps = {
       id: tarefaPrisma.id,
       titulo: tarefaPrisma.titulo,
@@ -261,41 +274,22 @@ export class TarefaService {
       dataPrazo: tarefaPrisma.dataPrazo ?? undefined,
       status: tarefaPrisma.status,
       concluida: tarefaPrisma.concluida,
-      tarefaPai: tarefaPrisma.tarefaPaiId ? { id: tarefaPrisma.tarefaPaiId } as any : undefined,
-      ...(tarefaPrisma.tipo === 'SIMPLES' && {
+      tipo: tarefaPrisma.tipo,
+      tarefaPai: tarefaPrisma.tarefaPaiId
+        ? ({ id: tarefaPrisma.tarefaPaiId } as any)
+        : undefined,
+      ...(tarefaPrisma.tipo === TarefaTipo.SIMPLES && {
         prioridade: tarefaPrisma.prioridade ?? PrioridadeTarefa.BAIXA,
         pontos: tarefaPrisma.pontos ?? 0,
         tempoEstimadoDias: tarefaPrisma.tempoEstimadoDias ?? 0,
       }),
-      ...(tarefaPrisma.tipo === 'PROJETO' && {
-        subtarefas: tarefaPrisma.subtarefas ? tarefaPrisma.subtarefas.map(st => ({ id: st.id } as any)) : [],
+      ...(tarefaPrisma.tipo === TarefaTipo.PROJETO && {
+        subtarefas:
+          tarefaPrisma.subtarefas?.map((st) => this.mapearDominio(st)) ?? [],
         limiteSubtarefas: tarefaPrisma.limiteSubtarefas ?? undefined,
       }),
     };
 
     return new Tarefa(props);
-  }
-
-  private async validarSubtarefas(subtarefasIds: number[]) {
-    const subtarefas = await this.prisma.tarefa.findMany({
-      where: {
-        id: { in: subtarefasIds },
-        tipo: 'SIMPLES',
-      },
-      select: { id: true, tarefaPaiId: true },
-    });
-
-    const encontrados = subtarefas.map((s) => s.id);
-    const faltantes = subtarefasIds.filter((id) => !encontrados.includes(id));
-    if (faltantes.length > 0) {
-      throw new NotFoundException(
-        `Subtarefas não encontradas: ${faltantes.join(', ')}`,
-      );
-    }
-
-    const jaVinculada = subtarefas.find((s) => s.tarefaPaiId != null);
-    if (jaVinculada) {
-      throw new BadRequestException(`Subtarefa ${jaVinculada.id} já tem pai`);
-    }
   }
 }

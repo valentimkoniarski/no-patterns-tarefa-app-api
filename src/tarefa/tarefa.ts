@@ -164,13 +164,6 @@ export class Tarefa {
       );
     }
 
-    if (this._status !== StatusTarefa.PENDENTE) {
-      throw new CampoInvalidoException(
-        'status',
-        'não é possível adicionar subtarefa em andamento ou concluída',
-      );
-    }
-
     for (const sub of this.subtarefas) {
       if (sub?.id && subtarefa?.id) {
         if (sub.id === subtarefa.id) {
@@ -214,10 +207,18 @@ export class Tarefa {
   iniciar(): void {
     if (this._status === StatusTarefa.PENDENTE) {
       this._status = StatusTarefa.EM_ANDAMENTO;
+      if (this.tipo === TarefaTipo.PROJETO) {
+        for (const subtarefa of this.subtarefas) {
+          subtarefa.iniciar();
+        }
+      }
     } else if (this._status === StatusTarefa.EM_ANDAMENTO) {
-      throw new CampoInvalidoException('status', 'Já em andamento');
+      throw new CampoInvalidoException(
+        'status',
+        'Já possui tarefas em andamento',
+      );
     } else if (this._status === StatusTarefa.CONCLUIDA) {
-      throw new CampoInvalidoException('status', 'Já concluída');
+      throw new CampoInvalidoException('status', 'Já possui tarefas concluída');
     }
   }
 
@@ -230,12 +231,7 @@ export class Tarefa {
     } else if (this._status === StatusTarefa.EM_ANDAMENTO) {
       if (this.tipo === TarefaTipo.PROJETO) {
         for (const sub of this.subtarefas) {
-          if (sub._status !== StatusTarefa.CONCLUIDA) {
-            throw new CampoInvalidoException(
-              'status',
-              'Há subtarefas pendentes',
-            );
-          }
+          sub.concluir();
         }
       }
       this._status = StatusTarefa.CONCLUIDA;
@@ -261,7 +257,6 @@ export class Tarefa {
       ).length;
       return Math.round((concluidas / total) * 100);
     }
-
   }
 
   obterSumario() {
@@ -299,7 +294,6 @@ export class Tarefa {
         progresso: this.obterProgresso(),
       };
     }
-
   }
 
   clonar(dto?: Partial<TarefaProps>) {

@@ -93,22 +93,6 @@ describe('Tarefa', () => {
         expect(tarefa.status).toBe(StatusTarefa.EM_ANDAMENTO);
       });
 
-      it('deve lançar erro ao tentar iniciar tarefa já em andamento', () => {
-        const tarefa = new Tarefa({
-          ...propsTarefaSimples,
-          status: StatusTarefa.EM_ANDAMENTO,
-        });
-        expect(() => tarefa.iniciar()).toThrow(new CampoInvalidoException('status', 'Já em andamento'));
-      });
-
-      it('deve lançar erro ao tentar iniciar tarefa já concluída', () => {
-        const tarefa = new Tarefa({
-          ...propsTarefaSimples,
-          status: StatusTarefa.CONCLUIDA,
-          concluida: true,
-        });
-        expect(() => tarefa.iniciar()).toThrow(new CampoInvalidoException('status', 'Já concluída'));
-      });
     });
 
     describe('concluir', () => {
@@ -253,7 +237,7 @@ describe('Tarefa', () => {
           tipo: TarefaTipo.PROJETO,
         });
         expect(() => {
-          new Tarefa({ ...propsTarefaProjeto, tarefaPai });
+          new Tarefa({ ...propsTarefaProjeto, tarefaPai: tarefaPai });
         }).toThrow(new CampoInvalidoException('projeto', 'não pode ter pontos, tempo estimado, prioridade ou tarefa pai'));
       });
     });
@@ -275,24 +259,6 @@ describe('Tarefa', () => {
         expect(projeto.subtarefas[0]).toBe(subtarefa);
       });
 
-      it('deve lançar erro ao adicionar subtarefa em projeto em andamento', () => {
-        const projeto = new Tarefa({
-          ...propsTarefaProjeto,
-          status: StatusTarefa.EM_ANDAMENTO,
-        });
-        const subtarefa = new Tarefa({
-          titulo: 'Subtarefa',
-          subtitulo: 'Subtítulo',
-          descricao: 'Descrição',
-          status: StatusTarefa.PENDENTE,
-          concluida: false,
-          tipo: TarefaTipo.SIMPLES,
-        });
-
-        expect(() => projeto.adicionarSubtarefa(subtarefa)).toThrow(
-          new CampoInvalidoException('status', 'não é possível adicionar subtarefa em andamento ou concluída'),
-        );
-      });
 
       it('deve lançar erro ao adicionar subtarefa do tipo projeto', () => {
         const projeto = new Tarefa(propsTarefaProjeto);

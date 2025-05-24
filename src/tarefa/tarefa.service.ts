@@ -228,6 +228,14 @@ export class TarefaService {
       where: { id },
       data: {
         status: tarefa.status,
+        subtarefas: {
+          updateMany: tarefa.subtarefas.map((subtarefa) => ({
+            where: { id: subtarefa.id },
+            data: {
+              status: subtarefa.status,
+            },
+          })),
+        },
       },
     });
   }
@@ -246,6 +254,15 @@ export class TarefaService {
       data: {
         status: tarefa.status,
         concluida: tarefa.concluida,
+        subtarefas: {
+          updateMany: tarefa.subtarefas.map((subtarefa) => ({
+            where: { id: subtarefa.id },
+            data: {
+              status: subtarefa.status,
+              concluida: subtarefa.concluida,
+            },
+          })),
+        },
       },
     });
   }
@@ -258,8 +275,24 @@ export class TarefaService {
 
     const tarefa = this.mapearDominio(tarefaExistente);
     const tarefaClonada = tarefa.clonar(dto);
-    const data = tarefaClonada.toPrisma();
-    await this.prisma.tarefa.create({ data });
+
+    if (!tarefaClonada) throw new NotFoundException('Tarefa não encontrada');
+
+    const tarefaParaPrisma = tarefaClonada.toPrisma();
+
+    await this.prisma.tarefa.create({
+      data: {
+        ...tarefaParaPrisma,
+        subtarefas: {
+          createMany: {
+            data: tarefaClonada.subtarefas.map((subtarefa) => ({
+              ...subtarefa.toPrisma(),
+              tarefaPaiId: undefined,
+            })),
+          },
+        },
+      },
+    });
     return tarefaClonada;
   }
 
@@ -276,7 +309,7 @@ export class TarefaService {
       concluida: tarefaPrisma.concluida,
       tipo: tarefaPrisma.tipo,
       tarefaPai: tarefaPrisma.tarefaPaiId
-        ? ({ id: tarefaPrisma.tarefaPaiId } as any)
+        ? ({ id: tarefaPrisma.tarefaPaiId } as Tarefa)
         : undefined,
       ...(tarefaPrisma.tipo === TarefaTipo.SIMPLES && {
         prioridade: tarefaPrisma.prioridade ?? PrioridadeTarefa.BAIXA,

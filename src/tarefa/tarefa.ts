@@ -273,11 +273,8 @@ export class Tarefa {
 
     if (this.tipo === TarefaTipo.PROJETO) {
       const total = this.subtarefas.length;
-      const concluidas = this.subtarefas.filter(
-        (t) => t.status === StatusTarefa.CONCLUIDA,
-      ).length;
-      const pontosTotais = this.subtarefas.reduce(
-        (acc, t) => acc + (t.pontos ?? 0),
+      const concluidas = this.subtarefas.filter((t) => t.status === StatusTarefa.CONCLUIDA).length;
+      const pontosTotais = this.subtarefas.reduce((acc, t) => acc + (t.pontos ?? 0),
         0,
       );
       const estimativaTotalDias = this.subtarefas.reduce(
